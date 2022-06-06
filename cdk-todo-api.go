@@ -41,19 +41,23 @@ func NewCdkTodoApiStack(scope constructs.Construct, id string, props *CdkTodoApi
 }
 
 func configureLambdaStack(stack awscdk.Stack, table awsdynamodb.Table) awslambda.Function {
-	myLambda := awslambda.NewFunction(stack, jsii.String("CreateTodoFunction"), &awslambda.FunctionProps{
+	myLambda := awslambda.NewFunction(stack, jsii.String("TodoFunction"), &awslambda.FunctionProps{
 		Runtime: awslambda.Runtime_GO_1_X(),
 		Handler: jsii.String("lambdaHandler"),
-		Code:    awslambda.AssetCode_FromAsset(jsii.String("./lambda/create"), &awss3assets.AssetOptions{}),
+		Code:    awslambda.AssetCode_FromAsset(jsii.String("./lambda"), &awss3assets.AssetOptions{}),
+		Environment: &map[string]*string{
+			"TableName": jsii.String("todo-api"),
+		},
 	})
 
 	table.GrantWriteData(myLambda)
+
 	return myLambda
 }
 
 func configureApiGatewayStack(stack awscdk.Stack, myLambda awslambda.Function) {
-	api := awsapigateway.NewRestApi(stack, jsii.String("create-todo-api"), &awsapigateway.RestApiProps{
-		RestApiName: jsii.String("Create Todo Lambda Service"),
+	api := awsapigateway.NewRestApi(stack, jsii.String("todo-api"), &awsapigateway.RestApiProps{
+		RestApiName: jsii.String("Todo Lambda Service"),
 		Description: jsii.String("This service for demonstration"),
 	})
 

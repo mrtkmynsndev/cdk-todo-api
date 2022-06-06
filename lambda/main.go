@@ -58,7 +58,7 @@ func init() {
 	actions[http.MethodPut] = updateTodo
 	actions[http.MethodDelete] = removeTodo
 
-	tableName = os.Getenv("tableName")
+	tableName = os.Getenv("TableName")
 }
 
 func handler(event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
