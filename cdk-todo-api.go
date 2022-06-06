@@ -2,6 +2,12 @@ package main
 
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigateway"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awss3assets"
+	"github.com/aws/jsii-runtime-go"
+
 	// "github.com/aws/aws-cdk-go/awscdk/v2/awssqs"
 	"github.com/aws/constructs-go/constructs/v10"
 	// "github.com/aws/jsii-runtime-go"
@@ -19,13 +25,51 @@ func NewCdkTodoApiStack(scope constructs.Construct, id string, props *CdkTodoApi
 	stack := awscdk.NewStack(scope, &id, &sprops)
 
 	// The code that defines your stack goes here
+	table := awsdynamodb.NewTable(stack, jsii.String("todo-api"), &awsdynamodb.TableProps{
+		PartitionKey: &awsdynamodb.Attribute{
+			Name: jsii.String("id"),
+			Type: awsdynamodb.AttributeType_STRING,
+		},
+		TableName: jsii.String("todo-api"),
+	})
 
-	// example resource
-	// queue := awssqs.NewQueue(stack, jsii.String("CdkTodoApiQueue"), &awssqs.QueueProps{
-	// 	VisibilityTimeout: awscdk.Duration_Seconds(jsii.Number(300)),
-	// })
+	myLambda := configureLambdaStack(stack, table)
+
+	configureApiGatewayStack(stack, myLambda)
 
 	return stack
+}
+
+func configureLambdaStack(stack awscdk.Stack, table awsdynamodb.Table) awslambda.Function {
+	myLambda := awslambda.NewFunction(stack, jsii.String("CreateTodoFunction"), &awslambda.FunctionProps{
+		Runtime: awslambda.Runtime_GO_1_X(),
+		Handler: jsii.String("lambdaHandler"),
+		Code:    awslambda.AssetCode_FromAsset(jsii.String("./lambda/create"), &awss3assets.AssetOptions{}),
+	})
+
+	table.GrantWriteData(myLambda)
+	return myLambda
+}
+
+func configureApiGatewayStack(stack awscdk.Stack, myLambda awslambda.Function) {
+	api := awsapigateway.NewRestApi(stack, jsii.String("create-todo-api"), &awsapigateway.RestApiProps{
+		RestApiName: jsii.String("Create Todo Lambda Service"),
+		Description: jsii.String("This service for demonstration"),
+	})
+
+	target := awsapigateway.NewLambdaIntegration(myLambda, &awsapigateway.LambdaIntegrationOptions{
+		RequestTemplates: &map[string]*string{
+			"application/json": jsii.String("{ 'statusCode': '200' }"),
+		},
+	})
+
+	resource := api.Root().AddResource(jsii.String("todos"), &awsapigateway.ResourceOptions{})
+	resource.AddMethod(jsii.String("POST"), target, &awsapigateway.MethodOptions{})
+	resource.AddMethod(jsii.String("GET"), target, &awsapigateway.MethodOptions{})
+
+	todo := resource.AddResource(jsii.String("{id}"), &awsapigateway.ResourceOptions{})
+	todo.AddMethod(jsii.String("PUT"), target, &awsapigateway.MethodOptions{})
+	todo.AddMethod(jsii.String("DELETE"), target, &awsapigateway.MethodOptions{})
 }
 
 func main() {
@@ -47,7 +91,9 @@ func env() *awscdk.Environment {
 	// Account/Region-dependent features and context lookups will not work, but a
 	// single synthesized template can be deployed anywhere.
 	//---------------------------------------------------------------------------
-	return nil
+	return &awscdk.Environment{
+		Region: jsii.String("eu-central-1"),
+	}
 
 	// Uncomment if you know exactly what account and region you want to deploy
 	// the stack to. This is the recommendation for production stacks.
