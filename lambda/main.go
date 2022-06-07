@@ -43,8 +43,6 @@ var actions map[string]EndpointAction
 
 var svc *dynamodb.DynamoDB
 
-var tableName string
-
 func init() {
 	session := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
@@ -58,7 +56,6 @@ func init() {
 	actions[http.MethodPut] = updateTodo
 	actions[http.MethodDelete] = removeTodo
 
-	tableName = os.Getenv("TableName")
 }
 
 func handler(event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -75,7 +72,7 @@ func getTodos(event events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	defer cancel()
 
 	input := dynamodb.ScanInput{
-		TableName: aws.String(tableName),
+		TableName: aws.String(os.Getenv("TableName")),
 	}
 
 	result, err := svc.ScanWithContext(ctx, &input)
@@ -84,7 +81,7 @@ func getTodos(event events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	}
 
-	var todos []ListTodoResponse
+	todos := []ListTodoResponse{}
 	for _, v := range result.Items {
 		todo := ListTodoResponse{}
 
@@ -126,7 +123,7 @@ func saveTodo(event events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	defer cancel()
 
 	input := dynamodb.PutItemInput{
-		TableName: aws.String(tableName),
+		TableName: aws.String(os.Getenv("TableName")),
 		Item:      av,
 	}
 
@@ -173,7 +170,7 @@ func updateTodo(event events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 				S: aws.String(id),
 			},
 		},
-		TableName:                 aws.String(tableName),
+		TableName:                 aws.String(os.Getenv("TableName")),
 		UpdateExpression:          expr.Update(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -198,7 +195,7 @@ func removeTodo(event events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	defer cancel()
 
 	input := dynamodb.DeleteItemInput{
-		TableName: aws.String(tableName),
+		TableName: aws.String(os.Getenv("TableName")),
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
 				S: aws.String(id),

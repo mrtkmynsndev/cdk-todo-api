@@ -1,3 +1,6 @@
+.DS_Store
+lambda/lambdaHandler
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
