@@ -13,6 +13,10 @@ import (
 	// "github.com/aws/jsii-runtime-go"
 )
 
+const (
+	tableName = "todo-api"
+)
+
 type CdkTodoApiStackProps struct {
 	awscdk.StackProps
 }
@@ -25,12 +29,12 @@ func NewCdkTodoApiStack(scope constructs.Construct, id string, props *CdkTodoApi
 	stack := awscdk.NewStack(scope, &id, &sprops)
 
 	// The code that defines your stack goes here
-	table := awsdynamodb.NewTable(stack, jsii.String("todo-api"), &awsdynamodb.TableProps{
+	table := awsdynamodb.NewTable(stack, jsii.String(tableName), &awsdynamodb.TableProps{
 		PartitionKey: &awsdynamodb.Attribute{
 			Name: jsii.String("id"),
 			Type: awsdynamodb.AttributeType_STRING,
 		},
-		TableName: jsii.String("todo-api"),
+		TableName: jsii.String(tableName),
 	})
 
 	myLambda := configureLambdaStack(stack, table)
@@ -46,17 +50,17 @@ func configureLambdaStack(stack awscdk.Stack, table awsdynamodb.Table) awslambda
 		Handler: jsii.String("lambdaHandler"),
 		Code:    awslambda.AssetCode_FromAsset(jsii.String("./lambda"), &awss3assets.AssetOptions{}),
 		Environment: &map[string]*string{
-			"TableName": jsii.String("todo-api"),
+			"TableName": jsii.String(tableName),
 		},
 	})
 
-	table.GrantWriteData(myLambda)
+	table.GrantFullAccess(myLambda)
 
 	return myLambda
 }
 
 func configureApiGatewayStack(stack awscdk.Stack, myLambda awslambda.Function) {
-	api := awsapigateway.NewRestApi(stack, jsii.String("todo-api"), &awsapigateway.RestApiProps{
+	api := awsapigateway.NewRestApi(stack, jsii.String("todo-apigw"), &awsapigateway.RestApiProps{
 		RestApiName: jsii.String("Todo Lambda Service"),
 		Description: jsii.String("This service for demonstration"),
 	})
